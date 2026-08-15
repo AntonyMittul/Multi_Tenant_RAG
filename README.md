@@ -34,3 +34,16 @@ Most RAG prototypes and tutorials are single-user applications that store docume
    docker-compose up -d --build
    ```
 5. Access the application at `http://localhost`.
+
+## Production Deployment ($0 Architecture)
+
+This repository is configured to be deployed using entirely free cloud services.
+
+- **Frontend**: Vercel (React/Vite)
+- **Backend API**: Render Web Service (Free Tier)
+- **Background Worker**: Render Background Worker (Celery)
+- **Redis Broker**: Render Key Value (Free)
+- **Database**: Supabase PostgreSQL (Free)
+- **Vector Store**: Qdrant Cloud (Free)
+
+See `.env.example` for the environment variables required to deploy to these platforms. For full deployment steps, configure the Vercel frontend to point to your Render backend via the `VITE_API_BASE_URL` environment variable.

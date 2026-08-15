@@ -11,7 +11,10 @@ import uuid
 gemini_client = genai.Client(api_key=settings.GEMINI_API_KEY)
 
 # Initialize Qdrant Client
-qdrant_client = QdrantClient(host=settings.QDRANT_HOST, port=settings.QDRANT_PORT)
+if settings.QDRANT_URL and settings.QDRANT_API_KEY:
+    qdrant_client = QdrantClient(url=settings.QDRANT_URL, api_key=settings.QDRANT_API_KEY)
+else:
+    qdrant_client = QdrantClient(host=settings.QDRANT_HOST, port=settings.QDRANT_PORT)
 
 COLLECTION_NAME = "rag_documents"
 

@@ -26,18 +26,31 @@ async def upload_document(
             detail="Unsupported file type. Please upload a PDF or TXT file."
         )
 
-    # Save the file locally temporarily
-    file_id = str(uuid.uuid4())
-    file_extension = os.path.splitext(file.filename)[1]
-    saved_filename = f"{file_id}{file_extension}"
-    file_path = os.path.join(UPLOAD_DIR, saved_filename)
+    # Parse the document in memory
+    content = await file.read()
+    text = ""
     
-    with open(file_path, "wb") as buffer:
-        content = await file.read()
-        buffer.write(content)
+    if file.filename.endswith(".pdf"):
+        import io
+        from PyPDF2 import PdfReader
+        reader = PdfReader(io.BytesIO(content))
+        for page in reader.pages:
+            extracted = page.extract_text()
+            if extracted:
+                text += extracted + "\n"
+    elif file.filename.endswith(".txt"):
+        text = content.decode("utf-8")
+        
+    if not text.strip():
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="No readable text could be extracted from the document."
+        )
 
-    # Trigger a Celery task
-    task = process_document_task.delay(file_path, current_tenant.id, file.filename)
+    file_id = str(uuid.uuid4())
+
+    # Trigger a Celery task with the extracted text instead of file path
+    task = process_document_task.delay(text, current_tenant.id, file.filename)
     task_id = task.id
     
     return {
