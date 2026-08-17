@@ -88,6 +88,7 @@ async def generate_rag_response(
             return GenerateResponse(**response_data)
 
     except Exception as e:
-        logger.error(f"Generation failed for tenant {current_tenant.id}: {str(e)}")
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Generation failed.")
+        error_msg = str(e)
+        logger.error(f"Generation failed for tenant {current_tenant.id}: {error_msg}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Generation failed: {error_msg}")
 
