@@ -2,8 +2,6 @@ from typing import List, Dict, AsyncGenerator
 import litellm
 from litellm import completion, acompletion
 from app.core.config import settings
-from langfuse import observe
-from langfuse import Langfuse
 import logging
 
 logger = logging.getLogger(__name__)
@@ -11,13 +9,6 @@ logger = logging.getLogger(__name__)
 # Basic LiteLLM configuration for resilience
 litellm.num_retries = 3               # Rate limiting/retries
 litellm.cache = litellm.Cache(type="local") # Caching
-
-# Initialize Langfuse
-langfuse = Langfuse(
-  secret_key=settings.LANGFUSE_SECRET_KEY,
-  public_key=settings.LANGFUSE_PUBLIC_KEY,
-  host=settings.LANGFUSE_HOST
-)
 
 SYSTEM_PROMPT = """
 You are a highly capable AI assistant for a multi-tenant platform.
@@ -37,7 +28,6 @@ Format them exactly like this:
 </FOLLOW_UP>
 """
 
-@observe()
 def construct_prompt(query: str, documents: List[Dict]) -> str:
     """Constructs the final prompt with context from retrieved documents."""
     context = ""
@@ -49,15 +39,14 @@ def construct_prompt(query: str, documents: List[Dict]) -> str:
     prompt = f"Context Information:\n{context}\n\nUser Query: {query}\n\nAnswer:"
     return prompt
 
-@observe(as_type="generation")
 def generate_answer(query: str, documents: List[Dict], temperature: float = 0.2) -> str:
     """Generate a single string answer using LiteLLM (Gateway)."""
     prompt = construct_prompt(query, documents)
     
     # Define models for fallback routing
     model_list = [
-        "gemini/gemini-3.1-flash-lite", # Primary
-        "gemini/gemini-2.5-flash"       # Fallback
+        "gemini/gemini-1.5-flash-8b", # Primary
+        "gemini/gemini-1.5-flash"       # Fallback
     ]
     
     response = litellm.completion(
@@ -72,14 +61,13 @@ def generate_answer(query: str, documents: List[Dict], temperature: float = 0.2)
     )
     return response.choices[0].message.content
 
-@observe(as_type="generation")
 async def generate_answer_stream(query: str, documents: List[Dict], temperature: float = 0.2) -> AsyncGenerator[str, None]:
     """Generate a streaming response using LiteLLM."""
     prompt = construct_prompt(query, documents)
     
     model_list = [
-        "gemini/gemini-3.1-flash-lite",
-        "gemini/gemini-2.5-flash"
+        "gemini/gemini-1.5-flash-8b",
+        "gemini/gemini-1.5-flash"
     ]
     
     response = await litellm.acompletion(
