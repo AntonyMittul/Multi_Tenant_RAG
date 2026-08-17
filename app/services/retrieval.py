@@ -2,14 +2,9 @@ from typing import List, Dict
 from qdrant_client.http.models import Filter, FieldCondition, MatchValue
 from app.services.ingestion import qdrant_client, gemini_client, COLLECTION_NAME
 from rank_bm25 import BM25Okapi
-from fastembed.rerank.cross_encoder import TextCrossEncoder
 import logging
 
 logger = logging.getLogger(__name__)
-
-# Initialize Cross-Encoder (runs locally via ONNX, downloads small model on first run)
-# We use a lightweight model suitable for reranking
-cross_encoder = TextCrossEncoder(model_name="Xenova/ms-marco-MiniLM-L-6-v2")
 
 def get_tenant_filter(tenant_id: str, filename: str = None) -> Filter:
     """Helper to create a strict tenant filter for Qdrant."""
@@ -144,47 +139,19 @@ def reciprocal_rank_fusion(dense_results: List[Dict], sparse_results: List[Dict]
     sorted_docs = sorted(rrf_scores.keys(), key=lambda x: rrf_scores[x], reverse=True)
     return [doc_map[doc_id] for doc_id in sorted_docs]
 
-def cross_encoder_rerank(query: str, documents: List[Dict], top_k: int = 5) -> List[Dict]:
-    """
-    Use a Cross-Encoder to accurately score and re-order the retrieved documents.
-    """
-    if not documents:
-        return []
-        
-    logger.info(f"Reranking {len(documents)} documents using Cross-Encoder")
-    
-    texts = [doc["text"] for doc in documents]
-    
-    # fastembed TextCrossEncoder expects list of strings for query and documents
-    # Note: query should be a string, texts should be list of strings
-    # The output is a generator of numpy arrays containing the scores.
-    # FastEmbed API for cross-encoder: rerank(query: str, documents: Iterable[str])
-    
-    scores = list(cross_encoder.rerank(query=query, documents=texts))
-    if not scores:
-        return documents[:top_k]
-        
-    # Attach new scores and sort
-    for i, doc in enumerate(documents):
-        doc["rerank_score"] = float(scores[i])
-        
-    reranked = sorted(documents, key=lambda x: x["rerank_score"], reverse=True)
-    return reranked[:top_k]
-
 def hybrid_search(query: str, tenant_id: str, top_k: int = 5, filename: str = None) -> List[Dict]:
     """
     Main retrieval pipeline:
     1. Dense Search (top 10)
     2. Sparse Search (top 10)
     3. RRF Combination
-    4. Cross-Encoder Reranking (top K)
     """
     dense_hits = dense_retrieval(query, tenant_id, top_k=10, filename=filename)
     sparse_hits = sparse_retrieval(query, tenant_id, top_k=10, filename=filename)
     
     combined_hits = reciprocal_rank_fusion(dense_hits, sparse_hits)
     
-    final_hits = cross_encoder_rerank(query, combined_hits, top_k=top_k)
-    
-    return final_hits
+    # Return top K from the combined hits
+    return combined_hits[:top_k]
+
 
