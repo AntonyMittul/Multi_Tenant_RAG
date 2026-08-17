@@ -79,7 +79,9 @@ export class RAGClient {
     });
 
     if (!response.ok) {
-      throw new Error(`Generation failed: ${response.statusText}`);
+      let errText = '';
+      try { errText = await response.text(); } catch(e) {}
+      throw new Error(`Generation failed: ${errText || response.statusText}`);
     }
 
     if (!response.body) throw new Error('No response body');
