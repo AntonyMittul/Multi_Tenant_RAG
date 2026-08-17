@@ -45,8 +45,8 @@ def generate_answer(query: str, documents: List[Dict], temperature: float = 0.2)
     
     # Define models for fallback routing
     model_list = [
-        "gemini/gemini-1.5-flash-8b", # Primary
-        "gemini/gemini-1.5-flash"       # Fallback
+        "gemini/gemini-3.1-flash-lite", # Primary
+        "gemini/gemini-2.5-flash"       # Fallback
     ]
     
     response = litellm.completion(
@@ -66,8 +66,8 @@ async def generate_answer_stream(query: str, documents: List[Dict], temperature:
     prompt = construct_prompt(query, documents)
     
     model_list = [
-        "gemini/gemini-1.5-flash-8b",
-        "gemini/gemini-1.5-flash"
+        "gemini/gemini-3.1-flash-lite",
+        "gemini/gemini-2.5-flash"
     ]
     
     response = await litellm.acompletion(
