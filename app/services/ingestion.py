@@ -19,13 +19,39 @@ else:
 COLLECTION_NAME = "rag_documents"
 
 def ensure_collection():
-    """Ensure the Qdrant collection exists."""
+    """Ensure the Qdrant collection exists and has necessary indexes."""
     collections = qdrant_client.get_collections().collections
     if not any(c.name == COLLECTION_NAME for c in collections):
         qdrant_client.create_collection(
             collection_name=COLLECTION_NAME,
             vectors_config=VectorParams(size=3072, distance=Distance.COSINE),
         )
+        qdrant_client.create_payload_index(
+            collection_name=COLLECTION_NAME,
+            field_name="tenant_id",
+            field_schema="keyword"
+        )
+        qdrant_client.create_payload_index(
+            collection_name=COLLECTION_NAME,
+            field_name="filename",
+            field_schema="keyword"
+        )
+    else:
+        # If collection exists but indexes might be missing (e.g. created previously),
+        # try to create them. Qdrant is idempotent and will ignore if they exist.
+        try:
+            qdrant_client.create_payload_index(
+                collection_name=COLLECTION_NAME,
+                field_name="tenant_id",
+                field_schema="keyword"
+            )
+            qdrant_client.create_payload_index(
+                collection_name=COLLECTION_NAME,
+                field_name="filename",
+                field_schema="keyword"
+            )
+        except Exception:
+            pass
 
 def parse_document(file_path: str) -> str:
     """Extract text from PDF or TXT."""
