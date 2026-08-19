@@ -63,7 +63,15 @@ async def generate_rag_response(
                     
                 yield "data: [DONE]\n\n"
                 
-            return StreamingResponse(event_generator(), media_type="text/event-stream")
+            return StreamingResponse(
+                event_generator(), 
+                media_type="text/event-stream",
+                headers={
+                    "Cache-Control": "no-cache",
+                    "Connection": "keep-alive",
+                    "X-Accel-Buffering": "no"
+                }
+            )
             
         else:
             # Synchronous generation
