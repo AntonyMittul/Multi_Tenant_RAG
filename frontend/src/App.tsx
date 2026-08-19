@@ -105,7 +105,25 @@ function App() {
   useEffect(() => {
     const savedKey = localStorage.getItem('tenantApiKey');
     if (savedKey && !isConfigured) {
-      handleLogin(savedKey);
+      // Optimistic rendering: Let them into the chat immediately
+      setApiKey(savedKey);
+      setIsConfigured(true);
+      const newClient = new RAGClient(savedKey);
+      setClient(newClient);
+      
+      // Load saved chat history instantly
+      const savedMessages = localStorage.getItem(`ragMessages_${savedKey}`);
+      if (savedMessages) setMessages(JSON.parse(savedMessages));
+      const savedFile = localStorage.getItem(`ragUploadedFile_${savedKey}`);
+      if (savedFile) setUploadedFile(JSON.parse(savedFile));
+      
+      // Verify key and get tenant name in the background
+      newClient.getTenantMe().then(tenantInfo => {
+        setTenantName(tenantInfo.name);
+      }).catch(() => {
+        // If the key is actually invalid, log them out
+        disconnect();
+      });
     }
   }, []);
 
